@@ -1,0 +1,106 @@
+#Step 1: Load the CSV Files
+import pandas as pd
+
+# Load the CSV files
+orders_df = pd.read_csv('/Users/pujarani/Desktop/order management dashboard/orders.csv')
+invoices_df = pd.read_csv('/Users/pujarani/Desktop/order management dashboard/invoices.csv')
+customers_df = pd.read_csv('/Users/pujarani/Desktop/order management dashboard/customers.csv')
+payments_df = pd.read_csv('/Users/pujarani/Desktop/order management dashboard/payments.csv')
+
+# Display the DataFrames to confirm they are loaded correctly
+print("Orders DataFrame")
+print(orders_df.head())
+
+print("\nInvoices DataFrame")
+print(invoices_df.head())
+
+print("\nCustomers DataFrame")
+print(customers_df.head())
+
+print("\nPayments DataFrame")
+print(payments_df.head())
+
+
+#Step 2: Join DataFrames
+#2.1 Join Invoices with Orders to Get customer_id
+
+# Join invoices with orders to get the customer_id
+invoices_with_orders_df = pd.merge(invoices_df, orders_df, on='order_id', how='left')
+
+# Display result to confirm join
+print(invoices_with_orders_df.head())
+
+#2.2 Join Invoices with Payments
+# Join invoices_with_orders_df with payments_df to get payment information
+invoices_with_payments_df = pd.merge(invoices_with_orders_df, payments_df, on='invoice_id', how='left')
+
+# Display result to confirm join
+print(invoices_with_payments_df.head())
+
+
+#2.3 Join Invoices with Customers
+# Finally, join with customers_df to get customer details
+invoices_with_customers_df = pd.merge(invoices_with_payments_df, customers_df, on='customer_id', how='left')
+
+# Display result to confirm join
+print(invoices_with_customers_df.head())
+
+
+#Step 3: Calculate Days Overdue
+from datetime import datetime
+
+# Replace invalid '0' values and ensure proper datetime handling for 'payment_date'
+invoices_with_customers_df['payment_date'] = invoices_with_customers_df['payment_date'].replace(['0', 'NaN'], pd.NaT)
+
+# Convert 'due_date' and 'payment_date' to datetime format
+invoices_with_customers_df['due_date'] = pd.to_datetime(invoices_with_customers_df['due_date'], format='%d/%m/%Y', errors='coerce', dayfirst=True)
+invoices_with_customers_df['payment_date'] = pd.to_datetime(invoices_with_customers_df['payment_date'], errors='coerce', dayfirst=True)
+
+# Calculate 'days_overdue' (if invoice is unpaid)
+invoices_with_customers_df['days_overdue'] = (datetime.now() - invoices_with_customers_df['due_date']).dt.days
+
+# Set 'days_overdue' to 0 for invoices that are paid
+invoices_with_customers_df.loc[invoices_with_customers_df['payment_date'].notnull(), 'days_overdue'] = 0
+
+print(invoices_with_customers_df[['invoice_id', 'due_date', 'payment_date', 'days_overdue']].head())
+
+
+#Step 4: Classify Risk Based on Days Overdue
+# Classify risk based on segment and days overdue
+invoices_with_customers_df['risk_classification'] = invoices_with_customers_df.apply(
+    lambda row: 'High' if row['days_overdue'] > 30 and row['segment'] == 'high risk' else
+                'Medium' if row['days_overdue'] > 15 and row['segment'] == 'medium risk' else
+                'Low', axis=1)
+
+print(invoices_with_customers_df[['invoice_id', 'customer_id', 'days_overdue', 'segment', 'risk_classification']].head())
+
+
+#Step 5  Summarize and Analyze the Data
+
+#5.1 Group by Risk Classification and Count Overdue Invoices
+overdue_summary = invoices_with_customers_df[invoices_with_customers_df['days_overdue'] > 0].groupby('risk_classification').size()
+print("Overdue Invoices by Risk Classification")
+print(overdue_summary)
+
+#5.2 Total Overdue Amount by Risk Classification
+# Make sure 'amount' is the correct column name, adjust if needed (e.g., 'invoice_amount')
+overdue_amounts = invoices_with_customers_df[invoices_with_customers_df['days_overdue'] > 0].groupby('risk_classification')['amount'].sum()
+print("Total Overdue Amount by Risk Classification")
+print(overdue_amounts)
+
+
+#Step 6: (Optional) Visualize the Data
+import matplotlib.pyplot as plt
+
+# Plot overdue invoices by risk classification
+overdue_summary.plot(kind='bar', title='Overdue Invoices by Risk Classification')
+plt.xlabel('Risk Classification')
+plt.ylabel('Number of Overdue Invoices')
+plt.show()
+
+
+#Step 7: Save the Final DataFrame
+# Save the modified DataFrame to a new CSV file
+invoices_with_customers_df.to_csv('/Users/pujarani/Desktop/order management dashboard/final_invoices_with_risk.csv', index=False)
+
+print("Final DataFrame saved successfully!")
