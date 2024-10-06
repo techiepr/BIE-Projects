@@ -1,0 +1,6 @@
+﻿invoice_id,order_id,due_date,status,amount
+1,1,25/01/2024,pending,500
+2,2,27/01/2024,paid,700
+3,3,30/01/2024,overdue,400
+4,4,01/02/2024,pending,850
+5,5,05/02/2024,overdue,950

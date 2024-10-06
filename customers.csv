@@ -1,0 +1,6 @@
+﻿customer_id,customer_name,segment,credit_score
+101,John Doe,high risk,600
+102,Jane Smith,low risk,800
+103,Bob Johnson,medium risk,700
+104,Emily Davis,low risk,850
+105,Michael Brown,high risk,550

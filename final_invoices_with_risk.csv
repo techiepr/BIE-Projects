@@ -1,0 +1,6 @@
+invoice_id,order_id,due_date,status,amount,customer_id,order_date,order_amount,payment_id,payment_date,amount_paid,customer_name,segment,credit_score,days_overdue,risk_classification
+1,1,2024-01-25,pending,500,101,10/01/2024,500,,,,John Doe,high risk,600,255,High
+2,2,2024-01-27,paid,700,102,12/01/2024,700,1.0,2024-01-28,700.0,Jane Smith,low risk,800,0,Low
+3,3,2024-01-30,overdue,400,103,15/01/2024,400,2.0,,0.0,Bob Johnson,medium risk,700,250,Medium
+4,4,2024-02-01,pending,850,104,18/01/2024,850,,,,Emily Davis,low risk,850,248,Low
+5,5,2024-02-05,overdue,950,105,20/01/2024,950,3.0,,0.0,Michael Brown,high risk,550,244,High
