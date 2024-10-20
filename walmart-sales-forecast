@@ -1,0 +1,47 @@
+import pandas as pd
+df = pd.read_csv("/Users/pujarani/Desktop/Walmart Sales Forecast/features.csv")
+df.replace("NA",0,inplace=True)
+df.to_csv('/Users/pujarani/Desktop/Walmart Sales Forecast/features_cleaned.csv', index=False)            
+
+
+
+import pandas as pd
+#loading the data
+features_df = pd.read_csv("/users/pujarani/desktop/Walmart Sales Forecast/features.csv")
+#converting the date column to datetime
+features_df['Date'] = pd.to_datetime(features_df['Date'], format="%d/%m/%Y")
+#Extract new features
+features_df['Year'] = features_df['Date'].dt.year
+features_df['Month'] = features_df['Date'].dt.month
+features_df['Week'] = features_df['Date'].dt.isocalendar().week
+
+#handle missing values
+features_df.fillna(features_df.median(), inplace=True)
+ 
+
+#Merge Datasets
+train_df = pd.read_csv("/users/pujarani/desktop/walmart sales forecast/train.csv")
+train_df["Date"] = pd.to_datetime(train_df["Date"], format="%d/%m/%Y")
+stores_df = pd.read_csv("/users/pujarani/desktop/walmart sales forecast/stores.csv")
+train_merged = pd.merge(train_df, features_df, on=['Store_id', 'Date'], how='left')
+train_merged = pd.merge(train_merged, stores_df, on='Store_id', how='left')
+print(train_merged.head(10))
+train_merged
+
+
+
+
+#3. Exploratory Data Analysis
+!pip install seaborn
+!pip install seaborn --user
+import matplotlib.pyplot as plt
+import seaborn as sns
+# Plot sales over time
+plt.plot(train_merged["Date"], train_merged["Weekly_Sales"])
+plt.title("Sales Over Time")
+plt.show()
+
+# Correlation heatmap
+corr = train_merged.corr()
+sns.heatmap(corr, annot=True, cmap="coolwarm")
+plt.show()
