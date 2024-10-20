@@ -1,0 +1,199 @@
+import pandas as pd
+df = pd.read_csv("/Users/pujarani/Desktop/Walmart Sales Forecast/features.csv")
+df.replace("NA",0,inplace=True)
+df.to_csv('/Users/pujarani/Desktop/Walmart Sales Forecast/features_cleaned.csv', index=False)            
+
+
+import pandas as pd
+#loading the data
+features_df = pd.read_csv("/users/pujarani/desktop/Walmart Sales Forecast/features.csv")
+#converting the date column to datetime
+features_df['Date'] = pd.to_datetime(features_df['Date'], format="%d/%m/%Y")
+#Extract new features
+features_df['Year'] = features_df['Date'].dt.year
+features_df['Month'] = features_df['Date'].dt.month
+features_df['Week'] = features_df['Date'].dt.isocalendar().week
+
+#handle missing values
+features_df.fillna(features_df.median(), inplace=True)
+ 
+#Merge Datasets
+train_df = pd.read_csv("/users/pujarani/desktop/walmart sales forecast/train.csv")
+train_df["Date"] = pd.to_datetime(train_df["Date"], format="%d/%m/%Y")
+stores_df = pd.read_csv("/users/pujarani/desktop/walmart sales forecast/stores.csv")
+train_merged = pd.merge(train_df, features_df, on=['Store_id', 'Date'], how='left')
+train_merged = pd.merge(train_merged, stores_df, on='Store_id', how='left')
+#print(train_merged.head(10))
+train_merged
+
+#3. Exploratory Data Analysis
+!pip install seaborn
+!pip install seaborn --user
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Plot sales over time
+plt.plot(train_merged["Date"], train_merged["Weekly_Sales"])
+plt.title("Sales Over Time")
+plt.show()
+
+
+
+# Select only numeric columns
+numeric_data = train_merged.select_dtypes(include=['float64', 'int64'])
+
+# Calculate correlation
+corr = numeric_data.corr()
+
+# Plot the heatmap
+sns.heatmap(corr, annot=True, cmap="coolwarm")
+plt.show()
+
+
+
+# Feature Selection
+from sklearn.ensemble import RandomForestRegressor
+
+features = ['IsHoliday_x', 'MarkDown1', 'MarkDown2', 'Fuel_Price', 'CPI', 'Unemployment', 'Week', 'Store_id']
+X = train_merged[features]
+Y = train_merged['Weekly_Sales']
+
+#Random forest regressor
+model = RandomForestRegressor()
+model.fit(X,Y)
+
+#Feature importances
+importances = model.feature_importances_
+
+
+
+#This will print the importance of each feature used in the model.
+# Feature importances
+importances = model.feature_importances_
+
+# Print feature importances
+for feature, importance in zip(features, importances):
+    print(f'{feature}: {importance}')
+
+
+
+#5. Modelling
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error
+
+#Features and target variable
+
+features = ['IsHoliday_x', 'MarkDown1', 'MarkDown2', 'Fuel_Price', 'CPI', 'Unemployment', 'Week', 'Store_id']
+X = train_merged[features]
+y = train_merged['Weekly_Sales']
+
+#Split data
+X_train, X_val, y_train, y_val = train_test_split(X,y,test_size=0.2, random_state=42)
+
+#Train Random Forest
+rf_model = RandomForestRegressor(n_estimators=100)
+rf_model.fit(X_train, y_train)
+
+#Predict
+y_pred = rf_model.predict(X_val)
+
+#Evaluate
+mae = mean_absolute_error(y_val, y_pred)
+print(f'Mean Absolute Error: {mae}')
+
+
+
+#6. ARIMA/Exponential Smoothing for Time-Series
+#!pip install statsmodels
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+#Fit Exponential Smoothing
+#model = ExponentialSmoothing(train_merged['Weekly_Sales'], trend='add', seasonal_periods=52)
+model = ExponentialSmoothing(train_merged['Weekly_Sales'], trend='add', seasonal='add', seasonal_periods=52)
+
+#fitted_model =model.fit(maxiter=1000)
+fitted_model = model.fit()
+#fitted_model = model.fit(use_boxcox=True)
+
+
+#fitted_model = model.fit(optimized=True, use_boxcox=False, initialization_method='estimated')
+
+
+#Predict
+y_pred  =fitted_model.forecast(steps=10)
+print(y_pred)
+
+
+
+
+#Evaluation
+#import numpy as np
+def weighted_mae(y_true, y_pred, weights):
+    return np.sum(weights*np.abs(y_true-y_pred)) / np.sum(weights)
+
+# Assuming validation data is a subset
+validation_data = train_merged[train_merged['Store_id'].isin(val_store_ids)]
+
+                                                         
+
+#Example usage
+y_val = y_val[:10]  # Limit y_val to 10 values
+
+weights = np.where(val_data['IsHoliday_y'] == 1,5,1)[:len(y_pred)]
+print(len(y_val), len(y_pred), len(weights))
+
+wmae = weighted_mae(y_val, y_pred, weights)
+print(f'WMAE: {wmae}')
+
+
+
+
+# Example of splitting data into training and validation sets (e.g., 80% train, 20% validation)
+from sklearn.model_selection import train_test_split
+
+train_data, val_data = train_test_split(train_merged, test_size=0.2, random_state=42)
+
+# Extracting store IDs for validation set
+val_store_ids = val_data['Store_id'].unique()
+
+# Now filter the validation data (removing irrelevant columns for prediction)
+features_for_prediction = ['Fuel_Price', 'MarkDown1', 'MarkDown2', 'MarkDown3', 'CPI', 'Unemployment', 'IsHoliday_y']
+val_data_for_prediction = val_data[features_for_prediction]
+
+# Assuming Weekly_Sales as the target variable
+y_val = val_data['Weekly_Sales'].values  # True values
+
+# Predict using the model
+y_pred = model.predict(val_data_for_prediction)  # Predicted values
+
+# Calculate weights based on IsHoliday flag in the validation data
+weights = np.where(val_data['IsHoliday_y'] == 1, 5, 1)
+
+# Calculate WMAE
+wmae = weighted_mae(y_val, y_pred, weights)
+print(f'WMAE: {wmae}')
+
+
+
+import numpy as np
+
+# Weighted Mean Absolute Error function
+def weighted_mae(y_true, y_pred, weights):
+    return np.sum(weights * np.abs(y_true - y_pred)) / np.sum(weights)
+
+# Assuming validation data is a subset
+validation_data = train_merged[train_merged['Store_id'].isin(val_store_ids)]
+
+# Example usage
+y_val = y_val[:len(y_pred)]  # Limit y_val to match the length of y_pred
+weights = np.where(val_data['IsHoliday_y'] == 1, 5, 1)[:len(y_pred)]  # Limit weights as well
+
+# Print the lengths to verify
+print(len(y_val), len(y_pred), len(weights))
+
+# Calculate WMAE
+wmae = weighted_mae(y_val, y_pred, weights)
+print(f'WMAE: {wmae}')
+
+
